@@ -3,12 +3,20 @@ const REQUIRED_KEY = process.env.REQUIRED_KEY;
 // --- helpers ---
 function normalizeForMatch(s) {
   if (s == null) return "";
-  return String(s)
+  let out = String(s)
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+
+  // German-style transliterations (Jürgen <-> Juergen etc.)
+  out = out
+    .replace(/ae/g, "a")
+    .replace(/oe/g, "o")
+    .replace(/ue/g, "u");
+
+  return out;
 }
 
 function levenshtein(a, b) {
@@ -73,10 +81,15 @@ export default async function handler(req, res) {
     const full_name_similarity = similarity(name_norm, contact_name_norm);
     const surname_similarity = similarity(surname_norm, contact_surname_norm);
 
+    const name_nf = normalizeForMatch(name_norm);
+    const contact_name_nf = normalizeForMatch(contact_name_norm);
+
     return res.status(200).json({
       ok: true,
       full_name_similarity,
-      surname_similarity
+      surname_similarity,
+      name_nf,
+      contact_name_nf
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: "Server error" });
